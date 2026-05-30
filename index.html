@@ -161,14 +161,14 @@
   .add-nl { font-size: 11px; color: #0F6E56; border: 0.5px solid #9FE1CB; border-radius: 6px; padding: 3px 9px; background: #E1F5EE; cursor: pointer; font-family: inherit; white-space: nowrap; }
   .add-nl:hover { background: #9FE1CB; }
   .add-nl.done { color: #888; border-color: #E0E0D8; background: #F5F5F0; cursor: default; }
-  .nl-src-card { background: #fff; border: 0.5px solid #E8E8E4; border-radius: 12px; overflow: hidden; margin-top: 8px; }
+  .nl-src-card { background: #fff; border: 0.5px solid #E8E8E4; border-radius: 12px; overflow: hidden; margin-top: 8px; flex-shrink: 0; }
   .nl-src-hdr { padding: 11px 14px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; }
   .nl-src-hdr:hover { background: #FAFAF8; }
   .nl-src-left { display: flex; align-items: center; gap: 9px; }
   .nl-src-ico { width: 30px; height: 30px; border-radius: 7px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 14px; background: #F1EFE8; }
   .nl-src-title { font-size: 13px; font-weight: 500; color: #1a1a1a; }
   .nl-src-ct { font-size: 11px; color: #888; }
-  .nl-src-body { border-top: 0.5px solid #E8E8E4; padding: 8px 14px 12px; display: none; }
+  .nl-src-body { border-top: 0.5px solid #E8E8E4; padding: 8px 14px 12px; display: none; max-height: 420px; overflow-y: auto; }
   .links-page { padding: 20px; display: flex; flex-direction: column; gap: 20px; overflow-y: auto; flex: 1; }
   .link-section-title { font-size: 11px; font-weight: 500; color: #888; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 10px; }
   .link-row { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: #fff; border: 0.5px solid #E8E8E4; border-radius: 8px; margin-bottom: 6px; }
