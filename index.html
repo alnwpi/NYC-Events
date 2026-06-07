@@ -243,6 +243,12 @@
   .myev-notes-text { font-size: 11px; color: #666; margin-top: 4px; font-style: italic; }
   .myev-del { background: none; border: none; cursor: pointer; color: #ccc; font-size: 14px; padding: 0 2px; font-family: inherit; flex-shrink: 0; line-height: 1; }
   .myev-del:hover { color: #c0392b; }
+  .myev-edit { background: none; border: none; cursor: pointer; color: #ccc; font-size: 13px; padding: 0 2px; font-family: inherit; flex-shrink: 0; line-height: 1; }
+  .myev-edit:hover { color: #534AB7; }
+  .myev-form-btns { display: flex; align-items: center; gap: 8px; }
+  .myev-cancel-btn { background: none; border: 1px solid #ddd; border-radius: 7px; padding: 8px 14px; font-size: 12px; font-weight: 500; cursor: pointer; font-family: inherit; color: #666; display: none; }
+  .myev-cancel-btn:hover { background: #f5f5f5; }
+  .myev-form.editing { border-left: 2px solid #534AB7; padding-left: 10px; margin-left: -10px; }
   .myev-empty { font-size: 12px; color: #aaa; text-align: center; padding: 30px 0; }
   .myev-actions { display: flex; justify-content: flex-end; margin-top: 8px; }
   .myev-export-btn { font-size: 11px; color: #555; background: #f3f3f3; border: 1px solid #ddd; border-radius: 6px; padding: 5px 11px; cursor: pointer; }
@@ -446,13 +452,17 @@
         <div class="myev-header-title">My Saved Events</div>
         <div class="myev-header-sub">Save any NYC event — paste a link and it stays here across sessions</div>
       </div>
-      <form class="myev-form" onsubmit="saveMyEvent(event)">
+      <form class="myev-form" id="myev-form" onsubmit="saveMyEvent(event)">
+        <input type="hidden" id="myev-edit-id">
         <input type="text"  class="myev-input" id="myev-name"     placeholder="Event name *" required>
-        <input type="text"  class="myev-input" id="myev-date"     placeholder="Date (e.g. Aug 15, 2026) *" required>
+        <input type="text"  class="myev-input" id="myev-date"     placeholder="Date (e.g. Aug 15 or every Thu)">
         <input type="url"   class="myev-input" id="myev-link"     placeholder="Link URL (paste here)">
         <input type="text"  class="myev-input" id="myev-location" placeholder="Location">
         <input type="text"  class="myev-input" id="myev-notes"    placeholder="Notes">
-        <button type="submit" class="myev-save-btn">Save event</button>
+        <div class="myev-form-btns">
+          <button type="submit" class="myev-save-btn" id="myev-save-btn">Save event</button>
+          <button type="button" class="myev-cancel-btn" id="myev-cancel-btn" onclick="cancelEditMyEvent()">Cancel</button>
+        </div>
       </form>
       <div class="myev-actions">
         <button type="button" class="myev-export-btn" onclick="exportMyEvents()" title="Download my-events.json. Drop it into your NYC Events folder and rebuild to make these saves permanent in every view (Pages, local file, and the Cowork artifact).">&#8681; Export backup (my-events.json)</button>
@@ -522,7 +532,7 @@ var MY_EV_REMOVED_KEY  = 'nycev_myevents_removed';
 var HIDDEN_NL_KEY      = 'nycev_hidden_nl';
 var HIDDEN_SRC_KEY     = 'nycev_hidden_src';
 // Baked-in saved events from my-events.json — appear in every view and survive rebuilds
-var MY_EV_SEED        = [];
+var MY_EV_SEED        = [{"id": "mq34xhhuzphr", "name": "Upper East Side Trivia Nights", "date": "Every Day", "link": "https://www.nyctrivialist.com/neighborhoods/upper-east-side", "location": "", "notes": ""}, {"id": "mq34udhfeb5n", "name": "Stumble Inn Trivia Nights", "date": "Mondays", "link": "", "location": "", "notes": ""}];
 // Baked-in source filter preferences from filter-prefs.json — seeds hiddenSrc / hiddenNl on first open
 var FILTER_PREFS_SEED = {"hiddenSrc": [], "hiddenNl": []};
 // Baked-in dismissed events from dismissed-events.json — seeds dismiss state on first open + GitHub Pages
@@ -1129,6 +1139,7 @@ function renderDismissedPanel() {
     return row;
   }
 
+
   pList.innerHTML = '';
   if (dismissedPerm.size === 0) {
     pList.innerHTML = '<div class="dismissed-empty">None</div>';
@@ -1175,20 +1186,58 @@ function getMyEvents() {
 
 function saveMyEvent(e) {
   e.preventDefault();
-  var name  = document.getElementById('myev-name').value.trim();
-  var date  = document.getElementById('myev-date').value.trim();
-  var link  = document.getElementById('myev-link').value.trim();
-  var loc   = document.getElementById('myev-location').value.trim();
-  var notes = document.getElementById('myev-notes').value.trim();
-  if (!name || !date) return;
-  var ev = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name: name, date: date, link: link, location: loc, notes: notes };
+  var editId = document.getElementById('myev-edit-id').value;
+  var name   = document.getElementById('myev-name').value.trim();
+  var date   = document.getElementById('myev-date').value.trim();
+  var link   = document.getElementById('myev-link').value.trim();
+  var loc    = document.getElementById('myev-location').value.trim();
+  var notes  = document.getElementById('myev-notes').value.trim();
+  if (!name) return;
   var evts = getLocalMyEvents();
-  evts.unshift(ev);
-  try { localStorage.setItem(MY_EV_KEY, JSON.stringify(evts)); } catch(e) {}
+  if (editId) {
+    // Update existing — if it was a seed event (not in local), add it to local so it shadows the seed
+    var found = false;
+    for (var i = 0; i < evts.length; i++) {
+      if (evts[i].id === editId) { evts[i] = { id: editId, name: name, date: date, link: link, location: loc, notes: notes }; found = true; break; }
+    }
+    if (!found) evts.unshift({ id: editId, name: name, date: date, link: link, location: loc, notes: notes });
+  } else {
+    evts.unshift({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name: name, date: date, link: link, location: loc, notes: notes });
+  }
+  try { localStorage.setItem(MY_EV_KEY, JSON.stringify(evts)); } catch(err) {}
+  resetMyEventForm();
+  renderMyEvents();
+}
+
+function editMyEvent(id) {
+  var evts = getMyEvents();
+  var ev = null;
+  for (var i = 0; i < evts.length; i++) { if (evts[i].id === id) { ev = evts[i]; break; } }
+  if (!ev) return;
+  document.getElementById('myev-edit-id').value    = ev.id;
+  document.getElementById('myev-name').value        = ev.name     || '';
+  document.getElementById('myev-date').value        = ev.date     || '';
+  document.getElementById('myev-link').value        = ev.link     || '';
+  document.getElementById('myev-location').value   = ev.location || '';
+  document.getElementById('myev-notes').value      = ev.notes    || '';
+  document.getElementById('myev-save-btn').textContent       = 'Update event';
+  document.getElementById('myev-cancel-btn').style.display   = 'inline-block';
+  document.getElementById('myev-form').classList.add('editing');
+  document.getElementById('myev-form').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function cancelEditMyEvent() {
+  resetMyEventForm();
+}
+
+function resetMyEventForm() {
+  document.getElementById('myev-edit-id').value = '';
   ['myev-name', 'myev-date', 'myev-link', 'myev-location', 'myev-notes'].forEach(function(id) {
     var el = document.getElementById(id); if (el) el.value = '';
   });
-  renderMyEvents();
+  document.getElementById('myev-save-btn').textContent       = 'Save event';
+  document.getElementById('myev-cancel-btn').style.display   = 'none';
+  document.getElementById('myev-form').classList.remove('editing');
 }
 
 function deleteMyEvent(id) {
@@ -1224,6 +1273,7 @@ function renderMyEvents() {
         '<div class="myev-card-name">' + nameHtml + '</div>' +
         locHtml + notesHtml +
       '</div>' +
+      '<button class="myev-edit" onclick="editMyEvent(\'' + ev.id + '\')" title="Edit">&#9998;</button>' +
       '<button class="myev-del" onclick="deleteMyEvent(\'' + ev.id + '\')" title="Remove">&#10005;</button>';
     list.appendChild(card);
   });
